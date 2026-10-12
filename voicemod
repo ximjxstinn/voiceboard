@@ -1,0 +1,21 @@
+name: Build
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.7.1"
+      - run: unzip -o voiceboard.zip -d build-src
+      - run: gradle build --stacktrace
+        working-directory: build-src/voiceboard
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voiceboard-mod
+          path: build-src/voiceboard/build/libs/*.jar
