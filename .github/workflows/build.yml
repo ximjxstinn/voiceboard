@@ -5,6 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -12,7 +14,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.7.1"
-      - run: unzip -o voiceboard.zip -d build-src
+      - name: Neueste ZIP entpacken
+        run: |
+          newest=""; best=0
+          for z in *.zip; do
+            t=$(git log -1 --format=%ct -- "$z")
+            if [ "$t" -ge "$best" ]; then best=$t; newest=$z; fi
+          done
+          echo "Benutze: $newest"
+          unzip -o "$newest" -d build-src
       - run: gradle build --stacktrace
         working-directory: build-src/voiceboard
       - uses: actions/upload-artifact@v4
