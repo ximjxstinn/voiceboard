@@ -47,6 +47,7 @@ gradlew build        (Windows)
 ```
 
 Die fertige Datei liegt in `build/libs/voiceboard-1.0.0.jar`.
+sha256:f00eda3235d74cdf580b9eca00fe5d3c3725a4797ec4560820439aa147401dbd
 
 ## Wenn der Build fehlschlägt
 
