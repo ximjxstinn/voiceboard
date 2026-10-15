@@ -1,11 +1,11 @@
 name: Build
 
-# Baut bei jedem Push. Bei einem Tag wie "v1.4.1" wird zusätzlich automatisch
-# ein Release mit der fertigen Jar und dem Text aus release-notes/<tag>.md erstellt.
+# Baut bei jedem Push. Gibt es für die Version aus gradle.properties eine Datei
+# release-notes/v<version>.md und noch kein Release, wird es automatisch erstellt
+# (mit Tag, fertiger Jar und diesem Text). Neue Version = Nummer erhöhen + Notizen anlegen.
 on:
   push:
     branches: [main]
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -30,10 +30,25 @@ jobs:
         with:
           name: voiceboard-mod
           path: out/*.jar
+      - name: Version prüfen
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(grep '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')
+          echo "tag=v$v" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ -f "release-notes/v$v.md" ] && ! gh release view "v$v" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Neues Release v$v wird erstellt"
+          else
+            echo "::notice::Kein neues Release (v$v gibt es schon oder keine Release-Notizen)"
+          fi
       - name: Release erstellen
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.ver.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: VoiceBoard ${{ github.ref_name }}
-          body_path: release-notes/${{ github.ref_name }}.md
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: VoiceBoard ${{ steps.ver.outputs.tag }}
+          body_path: release-notes/${{ steps.ver.outputs.tag }}.md
           files: out/*.jar
