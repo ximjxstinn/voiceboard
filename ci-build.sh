@@ -8,6 +8,23 @@ mkdir -p out
 if gradle clean build --stacktrace 2>&1 | tee build.log; then
   cp build/libs/*.jar out/
   echo "Fertige Jar:"; ls -1 out
+  # Kontrolle: stecken alle Minecraft-Varianten in der Jar?
+  for jar in out/*.jar; do
+    for v in versions/*/; do
+      variant="mc$(basename "$v" | tr '.' '_')"
+      n=$(unzip -l "$jar" | grep -c "de/ximjxstinn/voiceboard/${variant}/.*\.class" || true)
+      if [ "$n" -gt 0 ]; then
+        echo "::notice::$(basename "$jar"): Variante ${variant} mit ${n} Klassen enthalten"
+      else
+        echo "::error::$(basename "$jar"): Variante ${variant} FEHLT"
+        exit 1
+      fi
+    done
+    if unzip -l "$jar" | grep -q "com/terraformersmc/"; then
+      echo "::error::$(basename "$jar"): Mod-Menu-Nachbau darf nicht in der Jar sein"
+      exit 1
+    fi
+  done
   exit 0
 fi
 grep -E "\.java:[0-9]+: error:" build.log | head -20 | while IFS= read -r line; do
