@@ -1,5 +1,7 @@
 build/
 .gradle/
-run/
+out/
+build.log
+versions/*/build/
 .idea/
 *.iml

@@ -1,50 +1,129 @@
+// VoiceBoard – EINE Jar für Minecraft 26.1, 26.2 und 26.3.
+//
+//  src/core     Kern ohne Minecraft-Code (Audio, Filter, Einstellungen, Starter)
+//  src/client   Menüs, Tasten, HUD – wird für jede Version einzeln gegen deren
+//               Minecraft kompiliert und dabei ins Paket mcXX_Y verschoben
+//  src/compat   die wenigen Stellen, die sich zwischen den Versionen unterscheiden
+//  versions/    ein Unterprojekt pro Minecraft-Version
+//
+// Der Starter (VoiceBoardEntry) lädt beim Spielstart nur die passende Variante.
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 }
 
-version = project.mod_version
-group = project.maven_group
+def rootDirFile = projectDir
+// Das Unterprojekt, dessen Jar am Ende alle Varianten bekommt
+def mainVersion = '26.3'
 
-base {
-	archivesName = project.archives_base_name
-}
+subprojects {
+	apply plugin: 'net.fabricmc.fabric-loom'
 
-repositories {
-	maven {
-		name = 'henkelmax'
-		url = 'https://maven.maxhenkel.de/repository/public'
+	def mc = new Properties()
+	file('version.properties').withInputStream { mc.load(it) }
+	def variant = 'mc' + projectDir.name.replace('.', '_')
+
+	version = rootProject.mod_version
+	group = rootProject.maven_group
+
+	base {
+		archivesName = rootProject.archives_base_name
 	}
-	mavenCentral()
-}
 
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Client-Code in das Paket dieser Variante kopieren (de.ximjxstinn.voiceboard.client -> ...mc26_1 usw.)
+	def genDir = layout.buildDirectory.dir('generated/client/java')
+	def relocate = tasks.register('relocateClient', Sync) {
+		from(new File(rootDirFile, 'src/client/java'))
+		from(new File(rootDirFile, "src/compat/${mc.compat}/java"))
+		into genDir
+		eachFile { f ->
+			f.path = f.path.replace('de/ximjxstinn/voiceboard/client/', "de/ximjxstinn/voiceboard/${variant}/")
+		}
+		includeEmptyDirs = false
+		filter { line -> line.replace('de.ximjxstinn.voiceboard.client', "de.ximjxstinn.voiceboard.${variant}") }
+		filteringCharset = 'UTF-8'
+	}
 
-	// Simple Voice Chat ist zur Laufzeit als eigene Mod installiert
-	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+	sourceSets {
+		main {
+			java {
+				// src/modmenu-api: Nachbau der Mod-Menu-Schnittstelle, nur zum Kompilieren (siehe jar-exclude)
+				srcDirs = [new File(rootDirFile, 'src/core/java'), new File(rootDirFile, 'src/modmenu-api/java'), genDir]
+			}
+			resources {
+				srcDirs = [new File(rootDirFile, 'src/main/resources')]
+			}
+		}
+	}
+	tasks.named('compileJava') { dependsOn relocate }
+	// Mod-Menu-Nachbau nie mitliefern – zur Laufzeit kommt die echte Mod Menu
+	tasks.named('jar') { exclude 'com/terraformersmc/**' }
 
-	// MP3-Dekodierung, wird per Jar-in-Jar mitgeliefert
-	implementation "javazoom:jlayer:${project.jlayer_version}"
-	include "javazoom:jlayer:${project.jlayer_version}"
-}
+	repositories {
+		maven {
+			name = 'henkelmax'
+			url = 'https://maven.maxhenkel.de/repository/public'
+		}
+		mavenCentral()
+	}
 
-processResources {
-	def version = project.version
-	inputs.property "version", version
+	dependencies {
+		minecraft "com.mojang:minecraft:${mc.minecraft_version}"
+		implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+		implementation "net.fabricmc.fabric-api:fabric-api:${mc.fabric_api_version}"
 
-	filesMatching("fabric.mod.json") {
-		expand "version": version
+		// Simple Voice Chat ist zur Laufzeit als eigene Mod installiert
+		compileOnly "de.maxhenkel.voicechat:voicechat-api:${rootProject.voicechat_api_version}"
+
+		// MP3-Dekodierung, wird per Jar-in-Jar mitgeliefert
+		implementation "javazoom:jlayer:${rootProject.jlayer_version}"
+		include "javazoom:jlayer:${rootProject.jlayer_version}"
+	}
+
+	processResources {
+		def props = [version: project.version.toString()]
+		inputs.properties props
+		filesMatching("fabric.mod.json") {
+			expand props
+		}
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		it.options.release = 25
+		it.options.encoding = 'UTF-8'
+	}
+
+	java {
+		sourceCompatibility = JavaVersion.VERSION_25
+		targetCompatibility = JavaVersion.VERSION_25
 	}
 }
 
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
-	it.options.encoding = 'UTF-8'
+// Die Haupt-Jar (26.3) bekommt zusätzlich die Client-Varianten der anderen Versionen
+def mainProject = subprojects.find { it.projectDir.name == mainVersion }
+subprojects.each { other ->
+	if (other == mainProject) return
+	def otherVariant = 'mc' + other.projectDir.name.replace('.', '_')
+	mainProject.tasks.named('jar') {
+		dependsOn "${other.path}:compileJava"
+		from(new File(other.projectDir, 'build/classes/java/main')) {
+			include "de/ximjxstinn/voiceboard/${otherVariant}/**"
+		}
+	}
 }
 
-java {
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+// Fertige Jar nach build/libs kopieren
+tasks.register('clean', Delete) {
+	delete layout.buildDirectory
+}
+tasks.register('build') {
+	dependsOn subprojects.collect { "${it.path}:build" }
+	doLast {
+		copy {
+			from(new File(mainProject.projectDir, 'build/libs')) {
+				include '*.jar'
+				exclude '*-sources.jar', '*-dev.jar'
+			}
+			into layout.buildDirectory.dir('libs')
+		}
+	}
 }

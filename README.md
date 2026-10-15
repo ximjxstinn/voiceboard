@@ -1,17 +1,27 @@
 # VoiceBoard
 
-Soundboard und Voicefilter für **Simple Voice Chat** – Fabric, Minecraft **26.3**.
+Soundboard und Voicefilter für **Simple Voice Chat** – Fabric, Minecraft **26.1 – 26.3**.
 
 ## Funktionen
 
 - **Soundeffekte**: eigene `.mp3`/`.wav`-Sounds abspielen, die alle in Hörweite über Simple Voice Chat hören
   - Hotkey pro Sound (z. B. F13–F24 für Streamdeck/Makro-Tasten), nochmal drücken = Stopp
-  - Lautstärke pro Sound und Gesamtlautstärke
+  - Lautstärke pro Sound und Gesamtlautstärke – **bis 200 %** (über 100 % orange markiert, mit sanftem Begrenzer gegen Übersteuern)
   - „Alle Sounds stoppen“ per Knopf oder eigener Taste
   - Selbst mithören (mit eigener Lautstärke)
+  - Symbole unten links neben dem Mikrofon: Musiknote, solange ein Sound läuft, und Smiley-Maske, solange ein Voicefilter aktiv ist (abschaltbar mit „Anzeige“)
+  - Loop-Modus pro Sound – Knopf **„↻ Loop“**: grün = an, dunkelgrau = aus
   - Umbenennen (✎) und Entfernen (✖)
-- **Voicefilter** (nur auf deine Stimme): Hoch, Tief, Roboter, Echo, Hall, Radio, Telefon – mit Stärke-Regler
+- **Voicefilter-Schalter „Voicefilter: An/Aus“** mit eigener Taste – schaltet den Filter aus, ohne die Auswahl zu verlieren
+- **Voicefilter** (nur auf deine Stimme): Hoch, Tief, Baby, Roboter, Echo, Hall, Radio, Telefon – mit Stärke-Regler
+  und eigenen Reglern pro Filter (Tonhöhe, Frequenz, Verzögerung/Wiederholung, Raumgröße, Verzerrung, Qualität)
 - **Bibliothek**: zeigt alle Dateien im Sound-Ordner, einzeln oder alle auf einmal hinzufügen
+  - **Sounds per Link herunterladen**: YouTube, TikTok, SoundCloud usw. oder direkte .mp3/.wav-Links.
+    Beim ersten Mal lädt die Mod dafür automatisch yt-dlp und ffmpeg (Windows ca. 100 MB) nach
+    `.minecraft/voiceboard/tools`. Unter Linux muss ffmpeg installiert sein.
+
+- **Soundboard-Knopf im Voice-Chat-Menü** (Taste V): Musiknoten-Icon unten neben „Lautstärken“ öffnet VoiceBoard
+- **Mod Menu**: Mit installiertem [Mod Menu](https://modrinth.com/mod/modmenu) öffnet der Knopf „Konfigurieren“ (Zahnrad) das VoiceBoard-Menü – auch im Hauptmenü ohne Welt. Mod Menu ist optional.
 
 Andere Spieler brauchen **diese Mod nicht**, nur Simple Voice Chat.
 
@@ -22,14 +32,28 @@ Andere Spieler brauchen **diese Mod nicht**, nur Simple Voice Chat.
 3. Reiter **Bibliothek** → „Neu laden“ → „Hinzufügen“.
 4. Reiter **Soundeffekte** → auf die Tasten-Schaltfläche klicken und die gewünschte Taste drücken (Esc = Taste entfernen).
 
-Einstellungen liegen in `.minecraft/config/voiceboard.json`.
+### Gemeinsamer Speicher für alle Versionen
+Sounds, Soundliste, Lautstärken, Loop, Namen, Voicefilter und die Download-Werkzeuge liegen in **einem**
+Ordner, den alle Minecraft-Versionen (26.1 – 26.3) und alle Launcher-Profile gemeinsam nutzen:
+
+| System | Ordner |
+|---|---|
+| Windows | `%APPDATA%\VoiceBoard` |
+| macOS | `~/Library/Application Support/VoiceBoard` |
+| Linux | `~/.config/voiceboard` |
+
+Sounds aus älteren Versionen (Ordner `voiceboard/sounds` im Minecraft-Profil) werden beim ersten Start
+automatisch übernommen. Die alten Dateien bleiben dabei unverändert.
+
+**Tasten:** 26.3 nutzt ein anderes Tastensystem als 26.1/26.2. Deshalb wird pro Sound je eine Belegung für
+„26.1/26.2“ und „26.3“ gespeichert. Ist eine Taste nur in der anderen Version belegt, steht dort **„Neu belegen“**.
 
 ## Installieren
 
 In den `mods`-Ordner gehören:
-- `voiceboard-1.0.0.jar`
-- Fabric API (für 26.3)
-- Simple Voice Chat (Fabric, 26.3)
+- `voiceboard-1.4.1.jar` – **eine Datei für Minecraft 26.1, 26.1.1, 26.1.2, 26.2 und 26.3**
+- Fabric API (passend zu deiner Minecraft-Version)
+- Simple Voice Chat (Fabric, passend zu deiner Minecraft-Version)
 
 ## Bauen
 
@@ -46,8 +70,17 @@ gradlew build        (Windows)
 ./gradlew build      (macOS/Linux)
 ```
 
-Die fertige Datei liegt in `build/libs/voiceboard-1.0.0.jar`.
-sha256:f00eda3235d74cdf580b9eca00fe5d3c3725a4797ec4560820439aa147401dbd
+Ein `gradlew build` erzeugt **eine** Jar für alle Versionen: `build/libs/voiceboard-1.4.1.jar`.
+
+### Aufbau
+- `src/core/` – Kern **ohne Minecraft-Code**: Audio, Voicefilter, Einstellungen, Simple-Voice-Chat-Plugin und der Starter `VoiceBoardEntry`
+- `src/client/` – Menüs, Tasten, HUD. Wird für jede Version einzeln gegen deren Minecraft kompiliert und dabei in ein eigenes Paket verschoben (`mc26_1`, `mc26_2`, `mc26_3`)
+- `src/compat/<ordner>/` – die wenigen Stellen, die sich zwischen den Versionen unterscheiden
+- `versions/<version>/version.properties` – Minecraft- und Fabric-API-Version je Variante
+
+Beim Spielstart liest `VoiceBoardEntry` die Minecraft-Version und lädt **nur** die passende Variante.
+
+Neue Minecraft-Version: Ordner in `versions/` anlegen, Compat-Datei ergänzen und in `VoiceBoardEntry.variantFor` eintragen.
 
 ## Wenn der Build fehlschlägt
 

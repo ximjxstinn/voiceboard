@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "voiceboard",
+	"version": "${version}",
+	"name": "VoiceBoard",
+	"description": "Soundboard und Voicefilter für Simple Voice Chat.",
+	"authors": ["xImJxstinn"],
+	"contact": {
+		"sources": "https://github.com/ximjxstinn/voiceboard",
+		"issues": "https://github.com/ximjxstinn/voiceboard/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/voiceboard/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["de.ximjxstinn.voiceboard.VoiceBoardEntry"],
+		"voicechat": ["de.ximjxstinn.voiceboard.VoiceBoardPlugin"],
+		"modmenu": ["de.ximjxstinn.voiceboard.VoiceBoardModMenu"]
+	},
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": ">=26.1 <26.4",
+		"java": ">=25",
+		"fabric-api": "*",
+		"voicechat": ">=2.6.0"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}

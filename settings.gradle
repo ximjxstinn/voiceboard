@@ -10,3 +10,10 @@ pluginManagement {
 }
 
 rootProject.name = 'voiceboard'
+
+// Ein Unterprojekt pro Minecraft-Version (Ordner versions/<version>)
+file('versions').eachDir { dir ->
+	def name = 'mc' + dir.name.replace('.', '_')
+	include name
+	project(":${name}").projectDir = dir
+}
