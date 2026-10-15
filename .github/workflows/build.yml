@@ -3,6 +3,7 @@ name: Build
 # Baut bei jedem Push. Gibt es für die Version aus gradle.properties eine Datei
 # release-notes/v<version>.md und noch kein Release, wird es automatisch erstellt
 # (mit Tag, fertiger Jar und diesem Text). Neue Version = Nummer erhöhen + Notizen anlegen.
+# Danach wird dieselbe Version auf Modrinth hochgeladen (Secret MODRINTH_TOKEN nötig).
 on:
   push:
     branches: [main]
@@ -52,3 +53,8 @@ jobs:
           name: VoiceBoard ${{ steps.ver.outputs.tag }}
           body_path: release-notes/${{ steps.ver.outputs.tag }}.md
           files: out/*.jar
+      - name: Auf Modrinth hochladen
+        if: github.ref == 'refs/heads/main'
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: python3 .github/scripts/modrinth-publish.py
