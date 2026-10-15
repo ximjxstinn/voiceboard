@@ -18,7 +18,7 @@ if not token:
     print("::notice::Modrinth übersprungen – Secret MODRINTH_TOKEN ist nicht gesetzt")
     sys.exit(0)
 
-def call(path, data=None, headers=None, method=None):
+def call(path, data=None, headers=None, method=None, hint=None):
     h = {"User-Agent": UA, "Authorization": token}
     h.update(headers or {})
     req = urllib.request.Request(API + path, data=data, headers=h, method=method)
@@ -28,6 +28,8 @@ def call(path, data=None, headers=None, method=None):
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")
         print(f"::error::Modrinth {method or 'GET'} {path} -> HTTP {e.code}: {body[:500]}")
+        if hint and e.code in (401, 403, 404):
+            print(f"::error::{hint}")
         sys.exit(1)
 
 version = [l.split("=", 1)[1].strip() for l in open("gradle.properties", encoding="utf-8") if l.startswith("mod_version=")][0]
@@ -36,7 +38,9 @@ if not jars:
     print("::error::Keine Jar in out/ gefunden"); sys.exit(1)
 jar = jars[0]
 
-existing = call(f"/project/{PROJECT}/version")
+existing = call(f"/project/{PROJECT}/version", hint=(
+    "Projekt nicht sichtbar. Ist das Projekt noch nicht öffentlich, braucht der Modrinth-Schlüssel zusätzlich "
+    "die Rechte 'Read projects' und 'Read versions' (neben 'Create versions'). Sonst Projekt-ID prüfen."))
 if any(v.get("version_number") == version for v in existing):
     print(f"::notice::Modrinth: Version {version} gibt es schon – nichts zu tun")
     sys.exit(0)
@@ -79,6 +83,7 @@ body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filenam
 body += open(jar, "rb").read() + b"\r\n"
 body += f"--{boundary}--\r\n".encode()
 
-result = call("/version", data=bytes(body), headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}, method="POST")
+result = call("/version", data=bytes(body), headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}, method="POST",
+              hint="Hochladen abgelehnt. Der Modrinth-Schlüssel braucht das Recht 'Create versions'.")
 print(f"::notice::Modrinth: VoiceBoard {version} hochgeladen ({os.path.basename(jar)}) für {', '.join(game_versions)}")
 print(f"::notice::Modrinth-Version-ID: {result.get('id')}")
