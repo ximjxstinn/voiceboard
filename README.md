@@ -2,6 +2,10 @@
 
 Soundboard und Voicefilter für **Simple Voice Chat** – Fabric, Minecraft **26.1 – 26.3**.
 
+Fragen?
+Discord: xImJxstinn
+Twitch.tv/ximjxstinn
+
 ## Funktionen
 
 - **Soundeffekte**: eigene `.mp3`/`.wav`-Sounds abspielen, die alle in Hörweite über Simple Voice Chat hören
