@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Hält die geladenen Sounds im Speicher und mischt die gerade laufenden Sounds
- * Frame für Frame zusammen.
+ * Frame für Frame zusammen. Pausierte Sounds behalten ihre Stelle.
  */
 public class SoundPlayer {
 
@@ -33,6 +33,7 @@ public class SoundPlayer {
         final BoardConfig.SoundEntry entry;
         final short[] samples;
         int position;
+        boolean paused;
 
         Playback(BoardConfig.SoundEntry entry, short[] samples) {
             this.entry = entry;
@@ -40,13 +41,85 @@ public class SoundPlayer {
         }
     }
 
-    /** Startet den Sound, oder stoppt ihn, falls er schon läuft. */
-    public void toggle(BoardConfig.SoundEntry entry) {
-        if (isPlaying(entry.file)) {
-            stop(entry.file);
-        } else {
-            play(entry);
+    /** Infos zum Sound, den der Mini-Player gerade anzeigt. */
+    public record NowPlaying(String file, String name, int position, int length, boolean paused) {
+        public float progress() {
+            return (float) position / Math.max(1, length);
         }
+    }
+
+    /**
+     * Startet den Sound. Läuft er schon, wird er pausiert; ist er pausiert,
+     * läuft er an derselben Stelle weiter.
+     */
+    public void toggle(BoardConfig.SoundEntry entry) {
+        Boolean paused = pausedState(entry.file);
+        if (paused == null) {
+            play(entry);
+        } else {
+            setPaused(entry.file, !paused);
+        }
+    }
+
+    /** null = nicht geladen/aktiv, sonst ob pausiert. */
+    private synchronized Boolean pausedState(String file) {
+        Playback p = find(file);
+        return p == null ? null : p.paused;
+    }
+
+    private Playback find(String file) {
+        for (Playback p : active) {
+            if (p.entry.file.equals(file)) return p;
+        }
+        return null;
+    }
+
+    /** Pausiert oder setzt fort, ohne die Stelle zu verlieren. */
+    public synchronized void setPaused(String file, boolean paused) {
+        Playback p = find(file);
+        if (p != null) {
+            p.paused = paused;
+            focus(p);
+        }
+    }
+
+    /** Springt um die angegebenen Sekunden vor (positiv) oder zurück (negativ). */
+    public synchronized void skip(String file, int seconds) {
+        Playback p = find(file);
+        if (p != null) {
+            moveTo(p, p.position + seconds * VoiceFilter.SAMPLE_RATE);
+        }
+    }
+
+    /** Springt an eine Stelle (0 = Anfang, 1 = Ende). */
+    public synchronized void seek(String file, double fraction) {
+        Playback p = find(file);
+        if (p != null) {
+            moveTo(p, (int) Math.round(Math.max(0D, Math.min(1D, fraction)) * p.samples.length));
+        }
+    }
+
+    private void moveTo(Playback p, int position) {
+        // Kurz vor dem Ende anhalten, damit Vorspulen den Sound nicht sofort beendet
+        int last = Math.max(0, p.samples.length - 1);
+        p.position = Math.max(0, Math.min(last, position));
+        focus(p);
+    }
+
+    /** Zuletzt benutzter Sound rückt nach hinten = wird im Mini-Player angezeigt. */
+    private void focus(Playback p) {
+        if (active.remove(p)) {
+            active.add(p);
+        }
+    }
+
+    /** Der zuletzt gestartete oder bediente Sound (laufend oder pausiert), oder null. */
+    public synchronized NowPlaying current() {
+        if (active.isEmpty()) {
+            return null;
+        }
+        Playback p = active.get(active.size() - 1);
+        return new NowPlaying(p.entry.file, p.entry.name, p.position, p.samples.length, p.paused);
     }
 
     public void play(BoardConfig.SoundEntry entry) {
@@ -90,25 +163,34 @@ public class SoundPlayer {
         active.clear();
     }
 
+    /** Läuft gerade hörbar (nicht pausiert). */
     public synchronized boolean isPlaying(String file) {
-        for (Playback p : active) {
-            if (p.entry.file.equals(file)) return true;
-        }
-        return false;
+        Playback p = find(file);
+        return p != null && !p.paused;
+    }
+
+    public synchronized boolean isPaused(String file) {
+        Playback p = find(file);
+        return p != null && p.paused;
     }
 
     public boolean isLoading(String file) {
         return loading.contains(file);
     }
 
+    /** Ob gerade mindestens ein Sound hörbar läuft (pausierte zählen nicht). */
     public synchronized boolean hasActive() {
-        return !active.isEmpty();
+        for (Playback p : active) {
+            if (!p.paused) return true;
+        }
+        return false;
     }
 
     /** Namen der gerade laufenden Sounds (zuletzt gestarteter zuerst). */
     public synchronized List<String> activeNames() {
         List<String> names = new ArrayList<>();
         for (int i = active.size() - 1; i >= 0; i--) {
+            if (active.get(i).paused) continue;
             names.add(active.get(i).entry.name);
         }
         return names;
@@ -117,17 +199,15 @@ public class SoundPlayer {
     /** Ob mindestens einer der laufenden Sounds im Loop-Modus ist. */
     public synchronized boolean anyLooping() {
         for (Playback p : active) {
-            if (p.entry.loop) return true;
+            if (p.entry.loop && !p.paused) return true;
         }
         return false;
     }
 
-    /** Fortschritt eines laufenden Sounds (0..1) oder -1. */
+    /** Fortschritt eines laufenden oder pausierten Sounds (0..1) oder -1. */
     public synchronized float progress(String file) {
-        for (Playback p : active) {
-            if (p.entry.file.equals(file)) return (float) p.position / Math.max(1, p.samples.length);
-        }
-        return -1F;
+        Playback p = find(file);
+        return p == null ? -1F : (float) p.position / Math.max(1, p.samples.length);
     }
 
     /** Vergisst zwischengespeicherte Audiodaten, z. B. nach "Neu laden". */
@@ -141,13 +221,16 @@ public class SoundPlayer {
      * @return Samples im Bereich -1..1 oder null, wenn nichts läuft
      */
     public synchronized float[] nextFrame(int length) {
-        if (active.isEmpty()) {
+        if (!hasActive()) {
             return null;
         }
         float[] mix = new float[length];
         Iterator<Playback> it = active.iterator();
         while (it.hasNext()) {
             Playback p = it.next();
+            if (p.paused) {
+                continue; // bleibt an seiner Stelle stehen
+            }
             float volume = p.entry.volume / 100F;
             int filled = 0;
             while (filled < length) {

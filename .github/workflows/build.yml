@@ -4,9 +4,10 @@ name: Build
 # release-notes/v<version>.md und noch kein Release, wird es automatisch erstellt
 # (mit Tag, fertiger Jar und diesem Text). Neue Version = Nummer erhöhen + Notizen anlegen.
 # Danach wird dieselbe Version auf Modrinth hochgeladen (Secret MODRINTH_TOKEN nötig).
+# Andere Zweige werden nur gebaut (Jar unter Artifacts), aber nie veröffentlicht.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:

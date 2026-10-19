@@ -9,7 +9,9 @@ Twitch.tv/ximjxstinn
 ## Funktionen
 
 - **Soundeffekte**: eigene `.mp3`/`.wav`-Sounds abspielen, die alle in Hörweite über Simple Voice Chat hören
-  - Hotkey pro Sound (z. B. F13–F24 für Streamdeck/Makro-Tasten), nochmal drücken = Stopp
+  - Hotkey pro Sound (z. B. F13–F24 für Streamdeck/Makro-Tasten), nochmal drücken = **Pause**, nochmal = weiter an derselben Stelle
+  - **Mini-Player** oben: « 10 s zurück, Pause/Weiter, 10 s vor » und ein Spulregler mit Zeit (z. B. 1:23 / 3:45) – ziehen oder klicken springt an die Stelle
+  - Pausierte Sounds: gelber ▶-Knopf, gelber Fortschrittsbalken und „pausiert“
   - Lautstärke pro Sound und Gesamtlautstärke – **bis 200 %** (über 100 % orange markiert, mit sanftem Begrenzer gegen Übersteuern)
   - „Alle Sounds stoppen“ per Knopf oder eigener Taste
   - Selbst mithören (mit eigener Lautstärke)
@@ -55,7 +57,7 @@ automatisch übernommen. Die alten Dateien bleiben dabei unverändert.
 ## Installieren
 
 In den `mods`-Ordner gehören:
-- `voiceboard-1.4.1.jar` – **eine Datei für Minecraft 26.1, 26.1.1, 26.1.2, 26.2 und 26.3**
+- `voiceboard-1.4.2.jar` – **eine Datei für Minecraft 26.1, 26.1.1, 26.1.2, 26.2 und 26.3**
 - Fabric API (passend zu deiner Minecraft-Version)
 - Simple Voice Chat (Fabric, passend zu deiner Minecraft-Version)
 
@@ -74,7 +76,7 @@ gradlew build        (Windows)
 ./gradlew build      (macOS/Linux)
 ```
 
-Ein `gradlew build` erzeugt **eine** Jar für alle Versionen: `build/libs/voiceboard-1.4.1.jar`.
+Ein `gradlew build` erzeugt **eine** Jar für alle Versionen: `build/libs/voiceboard-1.4.2.jar`.
 
 ### Aufbau
 - `src/core/` – Kern **ohne Minecraft-Code**: Audio, Voicefilter, Einstellungen, Simple-Voice-Chat-Plugin und der Starter `VoiceBoardEntry`

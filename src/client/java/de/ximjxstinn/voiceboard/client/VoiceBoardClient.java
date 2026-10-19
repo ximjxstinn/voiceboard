@@ -106,7 +106,14 @@ public class VoiceBoardClient implements VersionClient {
             }
             for (BoardConfig.SoundEntry sound : config.sounds) {
                 if (pressed(sound.key)) {
+                    boolean wasPlaying = player().isPlaying(sound.file);
+                    boolean wasPaused = player().isPaused(sound.file);
                     player().toggle(sound);
+                    if (wasPlaying) {
+                        mc.player.sendOverlayMessage(Component.literal("§eII " + sound.name + " pausiert"));
+                    } else if (wasPaused) {
+                        mc.player.sendOverlayMessage(Component.literal("§a▶ " + sound.name));
+                    }
                 }
             }
         } else {

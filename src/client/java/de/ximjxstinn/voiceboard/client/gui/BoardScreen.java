@@ -13,6 +13,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -46,6 +47,10 @@ public class BoardScreen extends Screen {
     private static final int FILTER_TOGGLE = -3;
     private static final int GRAY = 0xFFA0A0A0;
     private static final int WHITE = 0xFFFFFFFF;
+    private static final int YELLOW = 0xFFFFD040;
+    private static final int SKIP_SECONDS = 10;
+    private static final Component PAUSED = Component.literal("pausiert");
+    private static final int PAUSED_WIDTH = 44;
 
     private static Tab lastTab = Tab.SOUNDS;
 
@@ -61,6 +66,9 @@ public class BoardScreen extends Screen {
 
     private final List<Label> labels = new ArrayList<>();
     private final List<ProgressBar> bars = new ArrayList<>();
+    /** "pausiert"-Hinweis je Zeile (rechtsbündig, x = rechte Kante) und die zugehörige Datei. */
+    private final List<Label> pausedLabels = new ArrayList<>();
+    private final List<String> pausedFiles = new ArrayList<>();
     private final List<Runnable> perFrame = new ArrayList<>();
     /** Lautstärke-Regler (x, y, Breite, Höhe), die eine 100-%-Markierung bekommen. */
     private final List<int[]> markers = new ArrayList<>();
@@ -116,6 +124,8 @@ public class BoardScreen extends Screen {
     private void build() {
         labels.clear();
         bars.clear();
+        pausedLabels.clear();
+        pausedFiles.clear();
         perFrame.clear();
         markers.clear();
 
@@ -169,9 +179,10 @@ public class BoardScreen extends Screen {
         BoardConfig config = config();
         int right = left + panelWidth;
 
-        labels.add(new Label(Component.literal("Alle Sounds stoppen"), left, y + 6, WHITE, false));
+        buildMiniPlayer(y, right - 144 - 6);
         addRenderableWidget(Button.builder(Component.literal("Stopp"), b -> player().stopAll())
-                .bounds(right - 80 - 4 - 60, y, 60, 20).build());
+                .bounds(right - 80 - 4 - 60, y, 60, 20).build())
+                .setTooltip(Tooltip.create(Component.literal("Alle Sounds stoppen")));
         addRenderableWidget(Button.builder(keyLabel(config.stopAllKey, listening == STOP_ALL), b -> startListening(STOP_ALL))
                 .bounds(right - 80, y, 80, 20).build());
         y += 24;
@@ -222,6 +233,41 @@ public class BoardScreen extends Screen {
         }
     }
 
+    /** « 10 s zurück, Pause/Weiter, 10 s vor » und Spulregler für den zuletzt benutzten Sound. */
+    private void buildMiniPlayer(int y, int endX) {
+        Button back = addRenderableWidget(Button.builder(Component.literal("«"), b -> skipCurrent(-SKIP_SECONDS))
+                .bounds(left, y, 20, 20).build());
+        back.setTooltip(Tooltip.create(Component.literal(SKIP_SECONDS + " Sekunden zurück")));
+        Button pause = addRenderableWidget(Button.builder(Component.literal("II"), b -> {
+            SoundPlayer.NowPlaying now = player().current();
+            if (now != null) {
+                player().setPaused(now.file(), !now.paused());
+            }
+        }).bounds(left + 22, y, 20, 20).build());
+        Button forward = addRenderableWidget(Button.builder(Component.literal("»"), b -> skipCurrent(SKIP_SECONDS))
+                .bounds(left + 44, y, 20, 20).build());
+        forward.setTooltip(Tooltip.create(Component.literal(SKIP_SECONDS + " Sekunden vor")));
+        SeekSlider seek = addRenderableWidget(new SeekSlider(left + 66, y, endX - left - 66, 20, player(), this::fit));
+        perFrame.add(() -> {
+            SoundPlayer.NowPlaying now = player().current();
+            boolean has = now != null;
+            back.active = has;
+            pause.active = has;
+            forward.active = has;
+            pause.setMessage(has && now.paused()
+                    ? Component.literal("▶").withStyle(ChatFormatting.YELLOW)
+                    : Component.literal("II"));
+            seek.sync();
+        });
+    }
+
+    private void skipCurrent(int seconds) {
+        SoundPlayer.NowPlaying now = player().current();
+        if (now != null) {
+            player().skip(now.file(), seconds);
+        }
+    }
+
     private void buildSoundRow(BoardConfig.SoundEntry entry, int index, int y) {
         BoardConfig config = config();
         int right = left + panelWidth;
@@ -240,11 +286,20 @@ public class BoardScreen extends Screen {
         Button play = addRenderableWidget(Button.builder(Component.literal("▶"), b -> player().toggle(entry))
                 .bounds(left, y, 20, 20).build());
         perFrame.add(() -> {
-            String symbol = player().isLoading(entry.file) ? "…" : player().isPlaying(entry.file) ? "■" : "▶";
-            play.setMessage(Component.literal(symbol));
+            if (player().isLoading(entry.file)) {
+                play.setMessage(Component.literal("…"));
+            } else if (player().isPlaying(entry.file)) {
+                play.setMessage(Component.literal("II"));
+            } else if (player().isPaused(entry.file)) {
+                play.setMessage(Component.literal("▶").withStyle(ChatFormatting.YELLOW));
+            } else {
+                play.setMessage(Component.literal("▶"));
+            }
         });
 
-        labels.add(new Label(Component.literal(fit(entry.name, nameWidth)), nameX, y + 6, WHITE, false));
+        labels.add(new Label(Component.literal(fit(entry.name, nameWidth - PAUSED_WIDTH)), nameX, y + 6, WHITE, false));
+        pausedLabels.add(new Label(PAUSED, nameX + nameWidth, y + 6, YELLOW, false));
+        pausedFiles.add(entry.file);
         bars.add(new ProgressBar(entry.file, nameX, y + 17, nameWidth));
 
         addRenderableWidget(Button.builder(keyLabel(entry.key, listening == index), b -> startListening(index))
@@ -531,7 +586,7 @@ public class BoardScreen extends Screen {
     }
 
     /** Kürzt Text mit "…", damit er in die gegebene Breite passt. */
-    private String fit(String text, int maxWidth) {
+    String fit(String text, int maxWidth) {
         if (maxWidth <= 0) return "";
         if (font.width(Component.literal(text)) <= maxWidth) return text;
         String s = text;
@@ -673,8 +728,16 @@ public class BoardScreen extends Screen {
         for (ProgressBar bar : bars) {
             float progress = player().progress(bar.file());
             if (progress >= 0F) {
+                int color = player().isPaused(bar.file()) ? YELLOW : 0xFF55FF55;
                 g.fill(bar.x(), bar.y(), bar.x() + bar.width(), bar.y() + 2, 0x60FFFFFF);
-                g.fill(bar.x(), bar.y(), bar.x() + Math.round(bar.width() * progress), bar.y() + 2, 0xFF55FF55);
+                g.fill(bar.x(), bar.y(), bar.x() + Math.round(bar.width() * progress), bar.y() + 2, color);
+            }
+        }
+
+        for (int i = 0; i < pausedLabels.size(); i++) {
+            if (player().isPaused(pausedFiles.get(i))) {
+                Label l = pausedLabels.get(i);
+                g.text(font, l.text(), l.x() - font.width(l.text()), l.y(), l.color(), true);
             }
         }
     }
