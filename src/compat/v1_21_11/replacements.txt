@@ -1,0 +1,9 @@
+# Namen, die in 1.21.11 anders heißen als in 26.x.
+# Werden beim Bauen der 1.21.11-Variante im Client-Code ersetzt (links -> rechts).
+GuiGraphicsExtractor => GuiGraphics
+super.extractRenderState( => super.render(
+public void extractRenderState( => public void render(
+protected void extractContents( => protected void renderContents(
+extractDefaultSprite( => renderDefaultSprite(
+g.centeredText( => g.drawCenteredString(
+g.text( => g.drawString(

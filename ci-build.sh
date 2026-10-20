@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Baut VoiceBoard (eine Jar für Minecraft 26.1 – 26.3) und legt sie in out/.
+# Baut VoiceBoard (eine Jar für Minecraft 1.21.11 und 26.1 – 26.3) und legt sie in out/.
 # Bei Fehlern werden die Compiler-Meldungen als GitHub-Hinweise ausgegeben,
 # damit man sie direkt auf der Actions-Seite sieht.
 set -uo pipefail

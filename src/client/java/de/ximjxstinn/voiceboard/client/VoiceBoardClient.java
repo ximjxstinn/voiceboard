@@ -12,9 +12,7 @@ import de.ximjxstinn.voiceboard.client.gui.PlayingHud;
 import de.ximjxstinn.voiceboard.client.gui.SoundboardButton;
 import de.ximjxstinn.voiceboard.config.BoardConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.KeyMapping;
@@ -28,7 +26,7 @@ import java.util.Map;
 
 /**
  * Client-Teil für EINE Minecraft-Version. Beim Bauen wird dieses Paket pro Version
- * kopiert (mc26_1, mc26_2, mc26_3); der Starter lädt nur die passende Kopie.
+ * kopiert (mc1_21_11, mc26_1, mc26_2, mc26_3); der Starter lädt nur die passende Kopie.
  */
 public class VoiceBoardClient implements VersionClient {
 
@@ -59,7 +57,7 @@ public class VoiceBoardClient implements VersionClient {
         });
 
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "voiceboard"));
-        openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.voiceboard.open", Compat.defaultOpenKey(), category));
+        openKey = Compat.registerKey(new KeyMapping("key.voiceboard.open", Compat.defaultOpenKey(), category));
 
         ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
 
@@ -69,7 +67,7 @@ public class VoiceBoardClient implements VersionClient {
         }
 
         // Anzeige "Sound läuft" unten links (über dem Mikrofon-Symbol von Simple Voice Chat)
-        HudElementRegistry.attachElementBefore(VanillaHudElements.MOB_EFFECTS,
+        HudElementRegistry.attachElementBefore(Compat.HUD_ANCHOR,
                 Identifier.fromNamespaceAndPath(MOD_ID, "playing"), PlayingHud::render);
 
         // Soundboard-Knopf ins Voice-Chat-Menü von Simple Voice Chat (Taste V) einfügen
@@ -102,7 +100,7 @@ public class VoiceBoardClient implements VersionClient {
             if (pressed(config.filterToggleKey)) {
                 config.filterEnabled = !config.filterEnabled;
                 config.save();
-                mc.player.sendOverlayMessage(Component.literal("Voicefilter: " + (config.filterEnabled ? "§aAn" : "§cAus")));
+                Compat.overlay(mc.player, Component.literal("Voicefilter: " + (config.filterEnabled ? "§aAn" : "§cAus")));
             }
             for (BoardConfig.SoundEntry sound : config.sounds) {
                 if (pressed(sound.key)) {
@@ -110,9 +108,9 @@ public class VoiceBoardClient implements VersionClient {
                     boolean wasPaused = player().isPaused(sound.file);
                     player().toggle(sound);
                     if (wasPlaying) {
-                        mc.player.sendOverlayMessage(Component.literal("§eII " + sound.name + " pausiert"));
+                        Compat.overlay(mc.player, Component.literal("§eII " + sound.name + " pausiert"));
                     } else if (wasPaused) {
-                        mc.player.sendOverlayMessage(Component.literal("§a▶ " + sound.name));
+                        Compat.overlay(mc.player, Component.literal("§a▶ " + sound.name));
                     }
                 }
             }
@@ -152,7 +150,7 @@ public class VoiceBoardClient implements VersionClient {
         Minecraft mc = Minecraft.getInstance();
         mc.execute(() -> {
             if (mc.player != null) {
-                mc.player.sendOverlayMessage(Component.literal(message));
+                Compat.overlay(mc.player, Component.literal(message));
             }
         });
     }

@@ -1,4 +1,4 @@
-// VoiceBoard – EINE Jar für Minecraft 26.1, 26.2 und 26.3.
+// VoiceBoard – EINE Jar für Minecraft 1.21.11, 26.1, 26.2 und 26.3.
 //
 //  src/core     Kern ohne Minecraft-Code (Audio, Filter, Einstellungen, Starter)
 //  src/client   Menüs, Tasten, HUD – wird für jede Version einzeln gegen deren
@@ -7,20 +7,28 @@
 //  versions/    ein Unterprojekt pro Minecraft-Version
 //
 // Der Starter (VoiceBoardEntry) lädt beim Spielstart nur die passende Variante.
+//
+// 1.21.11 ist noch verschleiert: Diese Variante wird mit Mojang-Namen gebaut und
+// anschließend von Loom umgewandelt (remap). Ihr Kern ist mit Java 21 gebaut, damit
+// die Jar auch dort startet. 26.x ist unverschleiert und braucht kein Umwandeln.
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}" apply false
 }
 
 def rootDirFile = projectDir
-// Das Unterprojekt, dessen Jar am Ende alle Varianten bekommt
-def mainVersion = '26.3'
+// Liefert Kern, Ressourcen und eingebettete Bibliotheken für die fertige Jar (ältestes Java)
+def baseVersion = '1.21.11'
 
 subprojects {
-	apply plugin: 'net.fabricmc.fabric-loom'
-
 	def mc = new Properties()
 	file('version.properties').withInputStream { mc.load(it) }
 	def variant = 'mc' + projectDir.name.replace('.', '_')
+	def remap = mc.remap == 'true'
+	def javaVersion = (mc.java ?: '25') as int
+	ext.remap = remap
+
+	apply plugin: remap ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
 
 	version = rootProject.mod_version
 	group = rootProject.maven_group
@@ -39,7 +47,23 @@ subprojects {
 			f.path = f.path.replace('de/ximjxstinn/voiceboard/client/', "de/ximjxstinn/voiceboard/${variant}/")
 		}
 		includeEmptyDirs = false
-		filter { line -> line.replace('de.ximjxstinn.voiceboard.client', "de.ximjxstinn.voiceboard.${variant}") }
+		// Optionale Liste "alt => neu" für Namen, die sich in dieser Minecraft-Version unterscheiden
+		def replFile = new File(rootDirFile, "src/compat/${mc.compat}/replacements.txt")
+		def replacements = []
+		if (replFile.exists()) {
+			replFile.readLines('UTF-8').each { l ->
+				if (l.trim() && !l.trim().startsWith('#') && l.contains('=>')) {
+					def parts = l.split('=>', 2)
+					replacements << [parts[0].trim(), parts[1].trim()]
+				}
+			}
+		}
+		inputs.property('replacements', replacements.toString())
+		filter { line ->
+			def out = line.replace('de.ximjxstinn.voiceboard.client', "de.ximjxstinn.voiceboard.${variant}")
+			replacements.each { r -> out = out.replace(r[0], r[1]) }
+			out
+		}
 		filteringCharset = 'UTF-8'
 	}
 
@@ -68,8 +92,14 @@ subprojects {
 
 	dependencies {
 		minecraft "com.mojang:minecraft:${mc.minecraft_version}"
-		implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-		implementation "net.fabricmc.fabric-api:fabric-api:${mc.fabric_api_version}"
+		if (remap) {
+			mappings loom.officialMojangMappings()
+			modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+			modImplementation "net.fabricmc.fabric-api:fabric-api:${mc.fabric_api_version}"
+		} else {
+			implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+			implementation "net.fabricmc.fabric-api:fabric-api:${mc.fabric_api_version}"
+		}
 
 		// Simple Voice Chat ist zur Laufzeit als eigene Mod installiert
 		compileOnly "de.maxhenkel.voicechat:voicechat-api:${rootProject.voicechat_api_version}"
@@ -88,22 +118,41 @@ subprojects {
 	}
 
 	tasks.withType(JavaCompile).configureEach {
-		it.options.release = 25
+		it.options.release = javaVersion
 		it.options.encoding = 'UTF-8'
 	}
 
 	java {
-		sourceCompatibility = JavaVersion.VERSION_25
-		targetCompatibility = JavaVersion.VERSION_25
+		sourceCompatibility = JavaVersion.toVersion(javaVersion)
+		targetCompatibility = JavaVersion.toVersion(javaVersion)
 	}
 }
 
-// Die Haupt-Jar (26.3) bekommt zusätzlich die Client-Varianten der anderen Versionen
-def mainProject = subprojects.find { it.projectDir.name == mainVersion }
-subprojects.each { other ->
-	if (other == mainProject) return
-	def otherVariant = 'mc' + other.projectDir.name.replace('.', '_')
-	mainProject.tasks.named('jar') {
+// Fertige Jar zusammensetzen:
+//  - aus 1.21.11 (umgewandelt): Kern (Java 21), Ressourcen, fabric.mod.json, eingebettetes jlayer, Variante mc1_21_11
+//  - aus 26.1/26.2/26.3: nur die jeweilige Client-Variante (unverschleiert, nicht umgewandelt)
+def baseProject = subprojects.find { it.projectDir.name == baseVersion }
+
+tasks.register('clean', Delete) {
+	delete layout.buildDirectory
+}
+
+def merged = tasks.register('mergedJar', Jar) {
+	group = 'build'
+	description = 'Eine Jar für alle Minecraft-Versionen'
+	archiveBaseName = rootProject.archives_base_name
+	archiveVersion = rootProject.mod_version
+	destinationDirectory = layout.buildDirectory.dir('libs')
+	duplicatesStrategy = DuplicatesStrategy.FAIL
+
+	dependsOn "${baseProject.path}:remapJar"
+	from({ zipTree(baseProject.tasks.named('remapJar').get().archiveFile.get().asFile) }) {
+		exclude 'com/terraformersmc/**'
+		exclude 'META-INF/MANIFEST.MF'
+	}
+	subprojects.each { other ->
+		if (other == baseProject) return
+		def otherVariant = 'mc' + other.projectDir.name.replace('.', '_')
 		dependsOn "${other.path}:compileJava"
 		from(new File(other.projectDir, 'build/classes/java/main')) {
 			include "de/ximjxstinn/voiceboard/${otherVariant}/**"
@@ -111,19 +160,7 @@ subprojects.each { other ->
 	}
 }
 
-// Fertige Jar nach build/libs kopieren
-tasks.register('clean', Delete) {
-	delete layout.buildDirectory
-}
 tasks.register('build') {
 	dependsOn subprojects.collect { "${it.path}:build" }
-	doLast {
-		copy {
-			from(new File(mainProject.projectDir, 'build/libs')) {
-				include '*.jar'
-				exclude '*-sources.jar', '*-dev.jar'
-			}
-			into layout.buildDirectory.dir('libs')
-		}
-	}
+	dependsOn merged
 }

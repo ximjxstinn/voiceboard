@@ -5,7 +5,7 @@ import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * Starter der Mod. Enthält keinen Minecraft-Code: Er liest nur die Minecraft-Version
- * und lädt dann die passende Variante (mc26_1, mc26_2 oder mc26_3).
+ * und lädt dann die passende Variante (mc1_21_11, mc26_1, mc26_2 oder mc26_3).
  * Die Klassen der anderen Varianten werden nie geladen.
  */
 public class VoiceBoardEntry implements ClientModInitializer {
@@ -30,6 +30,7 @@ public class VoiceBoardEntry implements ClientModInitializer {
     }
 
     static String variantFor(String mc) {
+        if (mc.startsWith("1.")) return "mc1_21_11";
         if (mc.equals("26.1") || mc.startsWith("26.1.") || mc.startsWith("26.1-")) return "mc26_1";
         if (mc.equals("26.2") || mc.startsWith("26.2.") || mc.startsWith("26.2-")) return "mc26_2";
         return "mc26_3";

@@ -25,7 +25,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.7.1"
-      - name: VoiceBoard bauen (26.1 – 26.3)
+      - name: VoiceBoard bauen (1.21.11 + 26.1 – 26.3)
         run: bash ci-build.sh
       - uses: actions/upload-artifact@v4
         if: always()

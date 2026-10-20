@@ -9,7 +9,7 @@ import glob, json, os, sys, urllib.request, urllib.error, uuid
 
 API = "https://api.modrinth.com/v2"
 PROJECT = "VmzRw23O"
-GAME_VERSIONS = ["26.1", "26.1.1", "26.1.2", "26.2", "26.3"]
+GAME_VERSIONS = ["1.21.11", "26.1", "26.1.1", "26.1.2", "26.2", "26.3"]
 DEPENDENCIES = [("fabric-api", "required"), ("simple-voice-chat", "required"), ("modmenu", "optional")]
 UA = "ximjxstinn/voiceboard (GitHub Actions)"
 
