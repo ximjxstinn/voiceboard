@@ -1,6 +1,6 @@
 # VoiceBoard
 
-Soundboard und Voicefilter für **Simple Voice Chat** – Fabric, Minecraft **26.1 – 26.3**.
+Soundboard und Voicefilter für **Simple Voice Chat** – Fabric, Minecraft **1.21.11** und **26.1 – 26.3**.
 
 Fragen?
 Discord: xImJxstinn
@@ -40,7 +40,7 @@ Andere Spieler brauchen **diese Mod nicht**, nur Simple Voice Chat.
 
 ### Gemeinsamer Speicher für alle Versionen
 Sounds, Soundliste, Lautstärken, Loop, Namen, Voicefilter und die Download-Werkzeuge liegen in **einem**
-Ordner, den alle Minecraft-Versionen (26.1 – 26.3) und alle Launcher-Profile gemeinsam nutzen:
+Ordner, den alle Minecraft-Versionen (1.21.11, 26.1 – 26.3) und alle Launcher-Profile gemeinsam nutzen:
 
 | System | Ordner |
 |---|---|
@@ -51,13 +51,13 @@ Ordner, den alle Minecraft-Versionen (26.1 – 26.3) und alle Launcher-Profile g
 Sounds aus älteren Versionen (Ordner `voiceboard/sounds` im Minecraft-Profil) werden beim ersten Start
 automatisch übernommen. Die alten Dateien bleiben dabei unverändert.
 
-**Tasten:** 26.3 nutzt ein anderes Tastensystem als 26.1/26.2. Deshalb wird pro Sound je eine Belegung für
-„26.1/26.2“ und „26.3“ gespeichert. Ist eine Taste nur in der anderen Version belegt, steht dort **„Neu belegen“**.
+**Tasten:** 26.3 nutzt ein anderes Tastensystem als 1.21.11/26.1/26.2. Deshalb wird pro Sound je eine Belegung für
+„1.21.11/26.1/26.2“ und „26.3“ gespeichert. Ist eine Taste nur in der anderen Version belegt, steht dort **„Neu belegen“**.
 
 ## Installieren
 
 In den `mods`-Ordner gehören:
-- `voiceboard-1.4.2.jar` – **eine Datei für Minecraft 26.1, 26.1.1, 26.1.2, 26.2 und 26.3**
+- `voiceboard-1.4.3.jar` – **eine Datei für Minecraft 1.21.11, 26.1, 26.1.1, 26.1.2, 26.2 und 26.3**
 - Fabric API (passend zu deiner Minecraft-Version)
 - Simple Voice Chat (Fabric, passend zu deiner Minecraft-Version)
 
@@ -76,12 +76,14 @@ gradlew build        (Windows)
 ./gradlew build      (macOS/Linux)
 ```
 
-Ein `gradlew build` erzeugt **eine** Jar für alle Versionen: `build/libs/voiceboard-1.4.2.jar`.
+Ein `gradlew build` erzeugt **eine** Jar für alle Versionen: `build/libs/voiceboard-1.4.3.jar`.
 
 ### Aufbau
 - `src/core/` – Kern **ohne Minecraft-Code**: Audio, Voicefilter, Einstellungen, Simple-Voice-Chat-Plugin und der Starter `VoiceBoardEntry`
-- `src/client/` – Menüs, Tasten, HUD. Wird für jede Version einzeln gegen deren Minecraft kompiliert und dabei in ein eigenes Paket verschoben (`mc26_1`, `mc26_2`, `mc26_3`)
+- `src/client/` – Menüs, Tasten, HUD. Wird für jede Version einzeln gegen deren Minecraft kompiliert und dabei in ein eigenes Paket verschoben (`mc1_21_11`, `mc26_1`, `mc26_2`, `mc26_3`)
 - `src/compat/<ordner>/` – die wenigen Stellen, die sich zwischen den Versionen unterscheiden
+  (für 1.21.11 zusätzlich `replacements.txt`: Namen, die dort anders heißen, z. B. `GuiGraphics` statt `GuiGraphicsExtractor`)
+- 1.21.11 ist noch verschleiert: Diese Variante wird mit Mojang-Namen gebaut und von Loom umgewandelt; ihr Kern ist mit Java 21 gebaut
 - `versions/<version>/version.properties` – Minecraft- und Fabric-API-Version je Variante
 
 Beim Spielstart liest `VoiceBoardEntry` die Minecraft-Version und lädt **nur** die passende Variante.
