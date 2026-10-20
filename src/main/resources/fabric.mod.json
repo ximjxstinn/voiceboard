@@ -22,7 +22,7 @@
 		"minecraft": [">=1.21.11 <1.22", ">=26.1 <26.4"],
 		"java": ">=21",
 		"fabric-api": "*",
-		"voicechat": ">=2.6.0"
+		"voicechat": "*"
 	},
 	"suggests": {
 		"modmenu": "*"
