@@ -7,3 +7,4 @@ protected void extractContents( => protected void renderContents(
 extractDefaultSprite( => renderDefaultSprite(
 g.centeredText( => g.drawCenteredString(
 g.text( => g.drawString(
+Screens.getWidgets( => Screens.getButtons(
