@@ -19,8 +19,9 @@ Twitch.tv/ximjxstinn
   - Loop-Modus pro Sound – Knopf **„↻ Loop“**: grün = an, dunkelgrau = aus
   - Umbenennen (✎) und Entfernen (✖)
 - **Voicefilter-Schalter „Voicefilter: An/Aus“** mit eigener Taste – schaltet den Filter aus, ohne die Auswahl zu verlieren
-- **Voicefilter** (nur auf deine Stimme): Hoch, Tief, Baby, Roboter, Echo, Hall, Radio, Telefon – mit Stärke-Regler
-  und eigenen Reglern pro Filter (Tonhöhe, Frequenz, Verzögerung/Wiederholung, Raumgröße, Verzerrung, Qualität)
+- **Voicefilter** (nur auf deine Stimme): Hoch, Tief, Baby, Roboter, Echo, Hall, Radio, Telefon,
+  **Villager, Enderman, Zombie, Ghast, Eisengolem, Alien, Unterwasser** – mit Stärke-Regler
+  und eigenen Reglern pro Filter (Tonhöhe, Frequenz, Verzögerung/Wiederholung, Raumgröße, Verzerrung, Qualität, Nasal, Knurren, Metall, Tiefe …)
 - **Bibliothek**: zeigt alle Dateien im Sound-Ordner, einzeln oder alle auf einmal hinzufügen
   - **Sounds per Link herunterladen**: YouTube, TikTok, SoundCloud usw. oder direkte .mp3/.wav-Links.
     Beim ersten Mal lädt die Mod dafür automatisch yt-dlp und ffmpeg (Windows ca. 100 MB) nach
@@ -57,7 +58,7 @@ automatisch übernommen. Die alten Dateien bleiben dabei unverändert.
 ## Installieren
 
 In den `mods`-Ordner gehören:
-- `voiceboard-1.4.3.jar` – **eine Datei für Minecraft 1.21.11, 26.1, 26.1.1, 26.1.2, 26.2 und 26.3**
+- `voiceboard-1.4.4.jar` – **eine Datei für Minecraft 1.21.11, 26.1, 26.1.1, 26.1.2, 26.2 und 26.3**
 - Fabric API (passend zu deiner Minecraft-Version)
 - Simple Voice Chat (Fabric, passend zu deiner Minecraft-Version)
 
@@ -76,7 +77,7 @@ gradlew build        (Windows)
 ./gradlew build      (macOS/Linux)
 ```
 
-Ein `gradlew build` erzeugt **eine** Jar für alle Versionen: `build/libs/voiceboard-1.4.3.jar`.
+Ein `gradlew build` erzeugt **eine** Jar für alle Versionen: `build/libs/voiceboard-1.4.4.jar`.
 
 ### Aufbau
 - `src/core/` – Kern **ohne Minecraft-Code**: Audio, Voicefilter, Einstellungen, Simple-Voice-Chat-Plugin und der Starter `VoiceBoardEntry`

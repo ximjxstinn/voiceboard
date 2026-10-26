@@ -448,6 +448,34 @@ public class BoardScreen extends Screen {
                 fs.phoneQuality = v;
                 config.markDirty();
             }));
+            case VILLAGER -> addRenderableWidget(new ValueSlider(left, y, panelWidth, 20, "Nasal", "%", 0, 100, fs.villagerNasal, v -> {
+                fs.villagerNasal = v;
+                config.markDirty();
+            }));
+            case ENDERMAN -> addRenderableWidget(new ValueSlider(left, y, panelWidth, 20, "Tonhöhe", "%", 50, 80, fs.endermanPitch, v -> {
+                fs.endermanPitch = v;
+                config.markDirty();
+            }));
+            case ZOMBIE -> addRenderableWidget(new ValueSlider(left, y, panelWidth, 20, "Knurren", "%", 0, 100, fs.zombieGrowl, v -> {
+                fs.zombieGrowl = v;
+                config.markDirty();
+            }));
+            case GHAST -> addRenderableWidget(new ValueSlider(left, y, panelWidth, 20, "Hall", "%", 0, 100, fs.ghastHall, v -> {
+                fs.ghastHall = v;
+                config.markDirty();
+            }));
+            case IRON_GOLEM -> addRenderableWidget(new ValueSlider(left, y, panelWidth, 20, "Metall", "%", 0, 100, fs.golemMetal, v -> {
+                fs.golemMetal = v;
+                config.markDirty();
+            }));
+            case ALIEN -> addRenderableWidget(new ValueSlider(left, y, panelWidth, 20, "Geschwindigkeit", "%", 0, 100, fs.alienSpeed, v -> {
+                fs.alienSpeed = v;
+                config.markDirty();
+            }));
+            case UNDERWATER -> addRenderableWidget(new ValueSlider(left, y, panelWidth, 20, "Tiefe", "%", 0, 100, fs.underwaterDepth, v -> {
+                fs.underwaterDepth = v;
+                config.markDirty();
+            }));
             default -> {
                 return false;
             }

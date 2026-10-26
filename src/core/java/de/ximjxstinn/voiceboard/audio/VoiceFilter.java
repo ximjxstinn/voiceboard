@@ -39,6 +39,7 @@ public class VoiceFilter {
     private final Comb golemComb2 = new Comb(ms(3.7), 0.62, 0.15);
     private final Comb enderComb = new Comb(ms(11), 0.45, 0.3);
     private float smoothNoise;
+    private int appliedDepth = -1;
 
     /** Aktuelle Einstellungen, werden pro Frame aus der Config übernommen. */
     private FilterSettings settings = new FilterSettings();
@@ -72,6 +73,12 @@ public class VoiceFilter {
         FilterSettings s = settings;
         if (type == FilterType.PITCH_HIGH) pitch.setRatio(s.pitchHigh / 100.0);
         if (type == FilterType.PITCH_LOW) pitch.setRatio(s.pitchLow / 100.0);
+        if (type == FilterType.UNDERWATER && s.underwaterDepth != appliedDepth) {
+            appliedDepth = s.underwaterDepth;
+            double cutoff = 1100 - 800 * appliedDepth / 100.0;
+            tone.lowPass(cutoff);
+            tone2.lowPass(cutoff);
+        }
         if (type == FilterType.HALL) {
             float fb = 0.70F + 0.25F * s.hallSize / 100F;
             for (Comb c : hallCombs) c.feedback = fb;
@@ -231,10 +238,8 @@ public class VoiceFilter {
             tone.highPass(280);
         } else if (type == FilterType.ZOMBIE) {
             tone.lowPass(2600);
-        } else if (type == FilterType.UNDERWATER) {
-            double cutoff = 1100 - 800 * settings.underwaterDepth / 100.0;
-            tone.lowPass(cutoff); tone2.lowPass(cutoff);
         }
+        appliedDepth = -1; // Unterwasser-Tiefpass wird in applySettings gesetzt
     }
 
     private static int ms(double ms) {
