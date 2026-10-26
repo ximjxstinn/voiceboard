@@ -31,6 +31,14 @@ public class VoiceFilter {
     // Radio / Telefon
     private final Biquad hp1 = new Biquad(), hp2 = new Biquad(), lp1 = new Biquad(), lp2 = new Biquad();
     private final Random random = new Random();
+    // Neue Minecraft-Stimmen
+    private double lfoPhase;     // langsames Wobbeln (Villager, Ghast, Alien, Unterwasser)
+    private double growlPhase;   // Zombie-Knurren / Alien-Trägerfrequenz
+    private final Biquad nasal = new Biquad(), nasal2 = new Biquad(), tone = new Biquad(), tone2 = new Biquad();
+    private final Comb golemComb1 = new Comb(ms(2.3), 0.72, 0.15);
+    private final Comb golemComb2 = new Comb(ms(3.7), 0.62, 0.15);
+    private final Comb enderComb = new Comb(ms(11), 0.45, 0.3);
+    private float smoothNoise;
 
     /** Aktuelle Einstellungen, werden pro Frame aus der Config übernommen. */
     private FilterSettings settings = new FilterSettings();
@@ -97,13 +105,8 @@ public class VoiceFilter {
                 echoPos = (echoPos + 1) % echoBuf.length;
                 return x + delayed * 0.7F;
             }
-            case HALL: {
-                float sum = 0F;
-                for (Comb c : hallCombs) sum += c.process(x);
-                float y = sum * 0.25F;
-                for (AllPass a : hallAllPass) y = a.process(y);
-                return x * 0.7F + y * 0.45F;
-            }
+            case HALL:
+                return x * 0.7F + reverb(x) * 0.45F;
             case RADIO: {
                 float y = lp2.process(lp1.process(hp2.process(hp1.process(x))));
                 float drive = 1F + 9F * s.radioDistortion / 100F;
@@ -118,9 +121,84 @@ public class VoiceFilter {
                 y = Math.round(y * steps) / steps;
                 return softClip(y * 2F) * 0.75F;
             }
+            case VILLAGER: {
+                // "Hmm": etwas tiefer, sehr nasal (Resonanz um 1 kHz) und schnelles Meckern
+                pitch.setRatio(0.9 * (1.0 + 0.045 * Math.sin(lfo(7.5))));
+                float p = pitch.process(x);
+                float n = nasal2.process(nasal.process(p));
+                float amount = s.villagerNasal / 100F;
+                float y = tone.process(p) * (1F - 0.75F * amount) + n * (1.5F + 3.5F * amount);
+                return softClip(y * 1.3F) * 0.85F;
+            }
+            case ENDERMAN: {
+                // Sehr tief, unheimlich schwebend, mit kurzem Metall-Nachklang
+                pitch.setRatio(s.endermanPitch / 100.0 * (1.0 + 0.02 * Math.sin(lfo(0.6))));
+                float p = pitch.process(x);
+                float y = p + enderComb.process(p) * 0.6F;
+                return softClip((y * 0.8F + reverb(y) * 0.35F) * 1.2F);
+            }
+            case ZOMBIE: {
+                // Tief und kehlig: schnelles Knurren (Amplitudenmodulation) + Verzerrung
+                pitch.setRatio(0.74);
+                float p = tone.process(pitch.process(x));
+                growlPhase += 2 * Math.PI * 34 / SAMPLE_RATE;
+                if (growlPhase > 2 * Math.PI) growlPhase -= 2 * Math.PI;
+                float g = s.zombieGrowl / 100F;
+                float mod = (float) (1.0 - 0.75 * g * (0.5 + 0.5 * Math.sin(growlPhase)));
+                return softClip(p * mod * (1.5F + 4F * g)) * 0.8F;
+            }
+            case GHAST: {
+                // Hoch, weinerlich zitternd, mit großem Hall
+                pitch.setRatio(1.5 * (1.0 + 0.035 * Math.sin(lfo(4.5))));
+                float p = pitch.process(x);
+                float h = s.ghastHall / 100F;
+                return softClip(p * (0.85F - 0.35F * h) + reverb(p) * (0.3F + 0.7F * h));
+            }
+            case IRON_GOLEM: {
+                // Tief und blechern: zwei kurze Kammfilter wie in einem Metallkörper
+                pitch.setRatio(0.68);
+                float p = pitch.process(x);
+                float m = s.golemMetal / 100F;
+                float metal = (golemComb1.process(p) + golemComb2.process(p)) * 0.5F;
+                return softClip((p * (1F - 0.6F * m) + metal * (0.4F + 1.2F * m)) * 1.2F) * 0.85F;
+            }
+            case ALIEN: {
+                // Etwas höher + Ringmodulator mit schwingender Frequenz
+                pitch.setRatio(1.18);
+                float p = pitch.process(x);
+                double sweep = 0.5 + 0.5 * Math.sin(lfo(0.3 + 2.7 * s.alienSpeed / 100.0));
+                growlPhase += 2 * Math.PI * (250 + 650 * sweep) / SAMPLE_RATE;
+                if (growlPhase > 2 * Math.PI) growlPhase -= 2 * Math.PI;
+                float ring = (float) (p * Math.sin(growlPhase));
+                return softClip((p * 0.45F + ring * 0.9F) * 1.3F);
+            }
+            case UNDERWATER: {
+                // Dumpf (Tiefpass), leicht schwankend, mit leisem Rauschen
+                pitch.setRatio(1.0 + 0.04 * Math.sin(lfo(2.2)));
+                float p = pitch.process(x);
+                float y = tone2.process(tone.process(p));
+                smoothNoise = smoothNoise * 0.995F + (random.nextFloat() - 0.5F) * 0.005F;
+                return softClip(y * 2.1F + smoothNoise * 0.2F);
+            }
             default:
                 return x;
         }
+    }
+
+    /** Fortlaufende Phase eines langsamen Schwingers mit der Frequenz hz (gemeinsam für alle Filter). */
+    private double lfo(double hz) {
+        lfoPhase += 2 * Math.PI * hz / SAMPLE_RATE;
+        if (lfoPhase > 2 * Math.PI * 1000) lfoPhase -= 2 * Math.PI * 1000;
+        return lfoPhase;
+    }
+
+    /** Hall aus vier Kamm- und zwei Allpassfiltern (wie "Hall"), nur der nasse Anteil. */
+    private float reverb(float x) {
+        float sum = 0F;
+        for (Comb c : hallCombs) sum += c.process(x);
+        float y = sum * 0.25F;
+        for (AllPass a : hallAllPass) y = a.process(y);
+        return y;
     }
 
     private void reset(FilterType type) {
@@ -128,6 +206,13 @@ public class VoiceFilter {
         if (type == FilterType.PITCH_HIGH) pitch.reset(settings.pitchHigh / 100.0);
         if (type == FilterType.PITCH_LOW) pitch.reset(settings.pitchLow / 100.0);
         if (type == FilterType.BABY) pitch.reset(settings.babyPitch / 100.0);
+        if (type.ordinal() >= FilterType.VILLAGER.ordinal()) pitch.reset(1.0);
+        lfoPhase = 0;
+        growlPhase = 0;
+        smoothNoise = 0;
+        golemComb1.clear();
+        golemComb2.clear();
+        enderComb.clear();
         babyPhase = 0;
         robotPhase = 0;
         robotComb.clear();
@@ -141,6 +226,14 @@ public class VoiceFilter {
         } else if (type == FilterType.PHONE) {
             hp1.highPass(320); hp2.highPass(320);
             lp1.lowPass(3300); lp2.lowPass(3300);
+        } else if (type == FilterType.VILLAGER) {
+            nasal.bandPass(1050, 3.5); nasal2.bandPass(1250, 2.5);
+            tone.highPass(280);
+        } else if (type == FilterType.ZOMBIE) {
+            tone.lowPass(2600);
+        } else if (type == FilterType.UNDERWATER) {
+            double cutoff = 1100 - 800 * settings.underwaterDepth / 100.0;
+            tone.lowPass(cutoff); tone2.lowPass(cutoff);
         }
     }
 
@@ -270,6 +363,20 @@ public class VoiceFilter {
 
         void highPass(double freq) {
             set(freq, true);
+        }
+
+        /** Bandpass (konstante Spitzen-Verstärkung 0 dB) um freq mit Güte q. */
+        void bandPass(double freq, double q) {
+            double w0 = 2 * Math.PI * freq / SAMPLE_RATE;
+            double cos = Math.cos(w0);
+            double alpha = Math.sin(w0) / (2 * q);
+            double a0 = 1 + alpha;
+            b0 = alpha / a0;
+            b1 = 0;
+            b2 = -alpha / a0;
+            a1 = -2 * cos / a0;
+            a2 = (1 - alpha) / a0;
+            x1 = x2 = y1 = y2 = 0;
         }
 
         private void set(double freq, boolean high) {

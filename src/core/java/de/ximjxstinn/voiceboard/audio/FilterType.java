@@ -9,7 +9,14 @@ public enum FilterType {
     ECHO("Echo"),
     HALL("Hall"),
     RADIO("Radio"),
-    PHONE("Telefon");
+    PHONE("Telefon"),
+    VILLAGER("Villager"),
+    ENDERMAN("Enderman"),
+    ZOMBIE("Zombie"),
+    GHAST("Ghast"),
+    IRON_GOLEM("Eisengolem"),
+    ALIEN("Alien"),
+    UNDERWATER("Unterwasser");
 
     public final String label;
 

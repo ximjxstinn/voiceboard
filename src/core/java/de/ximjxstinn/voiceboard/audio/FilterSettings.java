@@ -23,6 +23,20 @@ public class FilterSettings {
     public int radioDistortion = 45;
     /** Klangqualität für "Telefon" in % (0-100). */
     public int phoneQuality = 50;
+    /** Nasal-Klang für "Villager" in % (0-100). */
+    public int villagerNasal = 70;
+    /** Tonhöhe für "Enderman" in % (50-80). */
+    public int endermanPitch = 62;
+    /** Knurren für "Zombie" in % (0-100). */
+    public int zombieGrowl = 55;
+    /** Hall für "Ghast" in % (0-100). */
+    public int ghastHall = 60;
+    /** Metall-Klang für "Eisengolem" in % (0-100). */
+    public int golemMetal = 60;
+    /** Geschwindigkeit des Wobbelns für "Alien" in % (0-100). */
+    public int alienSpeed = 45;
+    /** Tiefe für "Unterwasser" in % (0-100). */
+    public int underwaterDepth = 60;
 
     public void sanitize() {
         pitchHigh = clamp(pitchHigh, 110, 200);
@@ -34,6 +48,13 @@ public class FilterSettings {
         hallSize = clamp(hallSize, 0, 100);
         radioDistortion = clamp(radioDistortion, 0, 100);
         phoneQuality = clamp(phoneQuality, 0, 100);
+        villagerNasal = clamp(villagerNasal, 0, 100);
+        endermanPitch = clamp(endermanPitch, 50, 80);
+        zombieGrowl = clamp(zombieGrowl, 0, 100);
+        ghastHall = clamp(ghastHall, 0, 100);
+        golemMetal = clamp(golemMetal, 0, 100);
+        alienSpeed = clamp(alienSpeed, 0, 100);
+        underwaterDepth = clamp(underwaterDepth, 0, 100);
     }
 
     /** Setzt die Werte eines Filters auf Standard zurück. */
@@ -51,6 +72,13 @@ public class FilterSettings {
             case HALL -> hallSize = d.hallSize;
             case RADIO -> radioDistortion = d.radioDistortion;
             case PHONE -> phoneQuality = d.phoneQuality;
+            case VILLAGER -> villagerNasal = d.villagerNasal;
+            case ENDERMAN -> endermanPitch = d.endermanPitch;
+            case ZOMBIE -> zombieGrowl = d.zombieGrowl;
+            case GHAST -> ghastHall = d.ghastHall;
+            case IRON_GOLEM -> golemMetal = d.golemMetal;
+            case ALIEN -> alienSpeed = d.alienSpeed;
+            case UNDERWATER -> underwaterDepth = d.underwaterDepth;
             default -> {
             }
         }
